@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>おこづかい帳 — なないろメソッド</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F7F5F0; --surface: #FFFFFF; --surface2: #F0EDE6;
+  --border: #E2DDD4; --border2: #C8C2B8;
+  --text: #2A2520; --text2: #6B6560; --text3: #9E9890;
+  --green: #2D7A4F; --green-bg: #EAF5EE;
+  --red: #B03A2E; --red-bg: #FDF0EE;
+  --amber: #8B6914; --amber-bg: #FDF6E3;
+  --blue: #1A5F8A; --blue-bg: #EDF4FA;
+  --accent: #E8855A; --accent2: #C46A3F;
+  --radius: 10px; --radius-lg: 16px;
+  --shadow: 0 1px 4px rgba(42,37,32,0.08);
+  --shadow-md: 0 4px 16px rgba(42,37,32,0.1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; line-height: 1.6; }
+.header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 60px; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow); }
+.header-title { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.header-logo { width: 32px; height: 32px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; font-weight: 700; }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.header-date { font-size: 13px; color: var(--text3); }
+.sync-indicator { font-size: 12px; padding: 3px 10px; border-radius: 99px; font-weight: 500; }
+.sync-ok { background: var(--green-bg); color: var(--green); }
+.sync-err { background: var(--red-bg); color: var(--red); }
+.sync-loading { background: var(--amber-bg); color: var(--amber); }
+.nav { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 16px; overflow-x: auto; }
+.nav-btn { padding: 12px 16px; font-size: 13px; font-weight: 500; color: var(--text2); border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: color 0.15s, border-color 0.15s; font-family: 'Noto Sans JP', sans-serif; }
+.nav-btn:hover { color: var(--text); }
+.nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.main { max-width: 720px; margin: 0 auto; padding: 20px 16px 60px; }
+.page { display: none; }
+.page.active { display: block; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow); }
+.card-title { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.card-title-icon { width: 28px; height: 28px; background: var(--surface2); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.form-group { margin-bottom: 14px; }
+.form-label { font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 5px; display: block; letter-spacing: 0.03em; }
+select, input[type="text"], input[type="number"] { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px; font-family: 'Noto Sans JP', sans-serif; background: var(--surface); color: var(--text); transition: border-color 0.15s, box-shadow 0.15s; }
+select:focus, input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(232,133,90,0.12); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.metric { background: var(--surface2); border-radius: var(--radius); padding: 14px 12px; text-align: center; }
+.metric-label { font-size: 11px; color: var(--text3); margin-bottom: 4px; font-weight: 500; letter-spacing: 0.04em; }
+.metric-value { font-size: 20px; font-weight: 700; font-family: 'Zen Kaku Gothic New', sans-serif; }
+.text-green { color: var(--green); }
+.text-red { color: var(--red); }
+.btn { padding: 9px 18px; border-radius: var(--radius); font-size: 14px; font-weight: 500; font-family: 'Noto Sans JP', sans-serif; cursor: pointer; border: 1px solid var(--border2); background: var(--surface); color: var(--text); transition: all 0.15s; }
+.btn:hover { background: var(--surface2); }
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.btn-primary { background: var(--accent); color: white; border-color: var(--accent); }
+.btn-primary:hover:not(:disabled) { background: var(--accent2); border-color: var(--accent2); }
+.btn-danger { color: var(--red); border-color: #E8C5C1; background: var(--surface); padding: 5px 10px; font-size: 12px; }
+.btn-danger:hover { background: var(--red-bg); }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-line { background: #06C755; color: white; border-color: #06C755; }
+.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+.notice { padding: 10px 14px; border-radius: var(--radius); font-size: 13px; margin-bottom: 14px; display: flex; align-items: flex-start; gap: 8px; }
+.notice-info { background: var(--blue-bg); color: var(--blue); }
+.notice-success { background: var(--green-bg); color: var(--green); }
+.notice-error { background: var(--red-bg); color: var(--red); }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; font-size: 11px; font-weight: 600; color: var(--text3); padding: 7px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--surface2); }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 600; }
+.badge-green { background: var(--green-bg); color: var(--green); }
+.badge-amber { background: var(--amber-bg); color: var(--amber); }
+.custom-section { background: var(--surface2); border: 1px dashed var(--border2); border-radius: var(--radius); padding: 14px; margin-top: 4px; }
+.custom-section-title { font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 10px; }
+.price-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.price-chip { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); font-size: 13px; gap: 6px; }
+.price-chip-info { flex: 1; min-width: 0; }
+.price-chip-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.price-chip-price { font-size: 12px; color: var(--text3); }
+.flex-between { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.flex-end { display: flex; justify-content: flex-end; margin-top: 12px; gap: 8px; }
+.modal-bg { display: none; position: fixed; inset: 0; background: rgba(42,37,32,0.45); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
+.modal-bg.open { display: flex; }
+.modal { background: var(--surface); border-radius: var(--radius-lg); padding: 24px; width: 100%; max-width: 400px; box-shadow: var(--shadow-md); }
+.modal-title { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+.balance-bar-bg { height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; margin: 10px 0 4px; }
+.balance-bar-fill { height: 100%; border-radius: 99px; transition: width 0.4s ease; }
+.bar-label { font-size: 11px; color: var(--text3); text-align: right; }
+.page-title { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+.loading-overlay { position: fixed; inset: 0; background: rgba(247,245,240,0.9); z-index: 300; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+.spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 14px; color: var(--text2); }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-text">データを読み込んでいます...</div>
+</div>
+
+<div class="header">
+  <div class="header-title">
+    <div class="header-logo">な</div>おこづかい帳
+  </div>
+  <div class="header-right">
+    <span class="sync-indicator sync-loading" id="sync-status">● 接続中...</span>
+    <span class="header-date" id="header-date"></span>
+  </div>
+</div>
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="switchPage('kinyuu',this)">📝 記帳</button>
+  <button class="nav-btn" onclick="switchPage('history',this)">📋 履歴</button>
+  <button class="nav-btn" onclick="switchPage('monthend',this)">📊 月末集計</button>
+  <button class="nav-btn" onclick="switchPage('children',this)">👦 お子さん管理</button>
+  <button class="nav-btn" onclick="switchPage('staff',this)">👤 スタッフ管理</button>
+  <button class="nav-btn" onclick="switchPage('ryoukin',this)">🏷️ 料金表</button>
+</nav>
+
+<div class="main">
+
+<!-- 記帳 -->
+<div class="page active" id="page-kinyuu">
+  <div class="page-title">おやつを記帳する</div>
+  <div class="card">
+    <div class="card-title"><div class="card-title-icon">👦</div>お子さんと残高</div>
+    <div class="form-group">
+      <label class="form-label">お子さんを選択</label>
+      <select id="k-child" onchange="onChildSelect()"><option value="">— 選んでください —</option></select>
+    </div>
+    <div id="balance-area" style="display:none;">
+      <div class="grid3" style="margin-bottom:10px;">
+        <div class="metric"><div class="metric-label">今月の予算</div><div class="metric-value" id="k-budget">¥0</div></div>
+        <div class="metric"><div class="metric-label">使用済み</div><div class="metric-value" id="k-used">¥0</div></div>
+        <div class="metric"><div class="metric-label">残高</div><div class="metric-value" id="k-balance">¥0</div></div>
+      </div>
+      <div class="balance-bar-bg"><div class="balance-bar-fill" id="k-bar" style="width:100%;background:var(--green);"></div></div>
+      <div class="bar-label" id="k-bar-label"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><div class="card-title-icon">🍪</div>品物を選ぶ</div>
+    <div class="form-group">
+      <label class="form-label">料金表から選ぶ</label>
+      <select id="k-item" onchange="onItemSelect()"><option value="">— 品名を選ぶ —</option></select>
+    </div>
+    <div style="text-align:center;font-size:12px;color:var(--text3);margin:2px 0 10px;">— または —</div>
+    <div class="custom-section">
+      <div class="custom-section-title">🛍️ 料金表にない品（お出かけなど）</div>
+      <div class="grid2">
+        <div class="form-group" style="margin-bottom:0;"><label class="form-label">品名</label><input type="text" id="k-custom-name" placeholder="例：コンビニプリン" oninput="onCustomInput()"></div>
+        <div class="form-group" style="margin-bottom:0;"><label class="form-label">単価（円）</label><input type="number" id="k-custom-price" placeholder="例：110" min="0" oninput="onCustomInput()"></div>
+      </div>
+    </div>
+    <div class="grid2" style="margin-top:14px;">
+      <div class="form-group"><label class="form-label">個数</label><input type="number" id="k-qty" value="1" min="1" max="20" oninput="calcTotal()"></div>
+      <div class="form-group"><label class="form-label">合計金額</label>
+        <div style="padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:16px;font-weight:700;font-family:'Zen Kaku Gothic New',sans-serif;color:var(--accent);" id="k-total">—</div>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">記入者</label><select id="k-staff"><option value="">— 記入者を選ぶ —</option></select></div>
+    <div class="flex-end"><button class="btn btn-primary" id="k-btn" onclick="addEntry()">✓ 記帳する</button></div>
+    <div id="k-result"></div>
+  </div>
+</div>
+
+<!-- 履歴 -->
+<div class="page" id="page-history">
+  <div class="page-title">記帳履歴</div>
+  <div class="card" style="margin-bottom:12px;">
+    <div class="grid2">
+      <div class="form-group" style="margin-bottom:0;"><label class="form-label">お子さん</label><select id="h-child" onchange="renderHistory()"><option value="">全員</option></select></div>
+      <div class="form-group" style="margin-bottom:0;"><label class="form-label">月</label><select id="h-month" onchange="renderHistory()"></select></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="flex-between" style="margin-bottom:12px;">
+      <div class="card-title" style="margin-bottom:0;"><div class="card-title-icon">📋</div><span id="h-title">記帳一覧</span></div>
+      <div style="font-size:13px;color:var(--text3);" id="h-count"></div>
+    </div>
+    <div class="table-wrap">
+      <table><thead><tr><th>日付</th><th>お子さん</th><th>品名</th><th>個数</th><th>金額</th><th>残高</th><th>記入者</th><th></th></tr></thead>
+      <tbody id="h-body"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- 月末集計 -->
+<div class="page" id="page-monthend">
+  <div class="page-title">月末集計</div>
+  <div class="card"><div class="card-title" style="margin-bottom:12px;"><div class="card-title-icon">📊</div>集計月</div>
+    <div class="form-group"><select id="m-month" onchange="renderMonthend()"></select></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><div class="card-title-icon">💰</div>残高一覧</div>
+    <div class="table-wrap">
+      <table><thead><tr><th>お子さん</th><th>前月繰越</th><th>今月予算</th><th>今月使用</th><th>最終残高</th><th>保護者の意向</th><th>状態</th></tr></thead>
+      <tbody id="m-body"></tbody></table>
+    </div>
+    <div class="flex-end" style="margin-top:14px;"><button class="btn btn-sm" onclick="window.print()">🖨️ 集計表を印刷</button></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><div class="card-title-icon">💚</div>LINE通知（フェーズ2で実装予定）</div>
+    <div class="notice notice-info">📱 LINE Messaging APIを設定すると、保護者へ自動通知・回答収集ができます。</div>
+    <div class="flex-between">
+      <div style="font-size:13px;color:var(--text2);">未回答の保護者：<strong id="m-unanswered">0名</strong></div>
+      <button class="btn btn-line" disabled style="opacity:0.5;cursor:not-allowed;">💬 LINE通知を送る</button>
+    </div>
+  </div>
+</div>
+
+<!-- お子さん管理 -->
+<div class="page" id="page-children">
+  <div class="page-title">お子さん管理</div>
+  <div class="card">
+    <div class="card-title"><div class="card-title-icon">👦</div>登録中のお子さん</div>
+    <table><thead><tr><th>お名前</th><th>前月繰越</th><th>登録日</th><th></th></tr></thead><tbody id="children-body"></tbody></table>
+    <hr class="sep">
+    <div class="card-title" style="margin-bottom:12px;"><div class="card-title-icon">➕</div>新規登録</div>
+    <div class="grid2">
+      <div class="form-group"><label class="form-label">お名前</label><input type="text" id="c-name" placeholder="例：田中 花子"></div>
+      <div class="form-group"><label class="form-label">前月繰越（円）</label><input type="number" id="c-carry" value="0" min="0"></div>
+    </div>
+    <div class="flex-end"><button class="btn btn-primary" onclick="addChild()">➕ 登録する</button></div>
+    <div id="c-result"></div>
+  </div>
+</div>
+
+<!-- スタッフ管理 -->
+<div class="page" id="page-staff">
+  <div class="page-title">スタッフ管理</div>
+  <div class="card">
+    <div class="card-title"><div class="card-title-icon">👤</div>登録中のスタッフ</div>
+    <table><thead><tr><th>お名前</th><th>登録日</th><th></th></tr></thead><tbody id="staff-body"></tbody></table>
+    <hr class="sep">
+    <div class="card-title" style="margin-bottom:12px;"><div class="card-title-icon">➕</div>新規登録</div>
+    <div class="form-group"><label class="form-label">お名前</label><input type="text" id="s-name" placeholder="例：山本 先生"></div>
+    <div class="flex-end"><button class="btn btn-primary" onclick="addStaff()">➕ 登録する</button></div>
+    <div id="s-result"></div>
+  </div>
+</div>
+
+<!-- 料金表 -->
+<div class="page" id="page-ryoukin">
+  <div class="page-title">料金表管理</div>
+  <div class="card">
+    <div class="card-title"><div class="card-title-icon">🏷️</div>登録中の品目（<span id="price-count">0</span>品）</div>
+    <div class="price-grid" id="price-grid"></div>
+    <hr class="sep">
+    <div class="card-title" style="margin-bottom:12px;"><div class="card-title-icon">➕</div>品目を追加</div>
+    <div class="grid2">
+      <div class="form-group"><label class="form-label">品名</label><input type="text" id="p-name" placeholder="例：ラムネ"></div>
+      <div class="form-group"><label class="form-label">単価（円）</label><input type="number" id="p-price" placeholder="例：40" min="1"></div>
+    </div>
+    <div class="flex-end"><button class="btn btn-primary" onclick="addPriceItem()">➕ 追加</button></div>
+    <div id="p-result"></div>
+  </div>
+</div>
+
+</div>
+
+<!-- 削除確認モーダル -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">確認</div>
+    <p style="font-size:14px;color:var(--text2);margin-bottom:20px;" id="modal-msg"></p>
+    <div class="flex-end">
+      <button class="btn" onclick="closeModal()">キャンセル</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">削除する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://oegpxnfikdmwspzshsfa.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9lZ3B4bmZpa2Rtd3NwenNoc2ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwOTkwMTcsImV4cCI6MjA5NDY3NTAxN30.37CvQ91IWa6F4_mddcry46t0wlWFd6ZSLrccUjSNPVA';
+const H = { 'Content-Type':'application/json', 'apikey':SUPABASE_KEY, 'Authorization':'Bearer '+SUPABASE_KEY };
+
+async function sbReq(path, opt={}) {
+  const mergedHeaders = { ...H, ...(opt.headers||{}) };
+  const r = await fetch(SUPABASE_URL+'/rest/v1/'+path, { ...opt, headers: mergedHeaders });
+  if (!r.ok) {
+    const errText = await r.text();
+    console.error('Supabase error:', r.status, errText);
+    throw new Error(r.status + ': ' + errText);
+  }
+  const t = await r.text();
+  return t ? JSON.parse(t) : [];
+}
+const sbGet = (t,q='') => sbReq(t+(q?'?'+q:''));
+const sbInsert = (t,d) => sbReq(t, { method:'POST', headers:{ Prefer:'return=representation' }, body:JSON.stringify(d) });
+const sbUpdate = (t,id,d) => sbReq(t+'?id=eq.'+id, { method:'PATCH', headers:{ Prefer:'return=representation' }, body:JSON.stringify(d) });
+const sbDelete = (t,id) => sbReq(t+'?id=eq.'+id, { method:'DELETE' });
+
+const BUDGET_PER_DAY = 100;
+let children=[], staffList=[], priceList=[], entries=[];
+let kMode='list', deleteTarget=null;
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function nowDate(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function fmtDate(s){ const[,m,d]=s.split('-'); return `${+m}/${+d}`; }
+function currentYM(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+function ymLabel(ym){ const[y,m]=ym.split('-'); return `${y}年${+m}月`; }
+function daysInMonth(ym){ const[y,m]=ym.split('-').map(Number); return new Date(y,m,0).getDate(); }
+function mBudget(ym){ return BUDGET_PER_DAY*daysInMonth(ym); }
+function fmtBal(b){ return (b<0?'-¥':'¥')+Math.abs(b).toLocaleString(); }
+function balColor(b){ return b>=0?'var(--green)':'var(--red)'; }
+
+function notice(el,type,msg){
+  el.innerHTML=`<div class="notice notice-${type}" style="margin-top:12px;">${msg}</div>`;
+  if(type!=='error') setTimeout(()=>{if(el)el.innerHTML='';},4000);
+}
+function setSyncStatus(s){
+  const el=document.getElementById('sync-status');
+  el.className='sync-indicator '+(s==='ok'?'sync-ok':s==='err'?'sync-err':'sync-loading');
+  el.textContent=s==='ok'?'● 接続中':s==='err'?'● 接続エラー':'● 同期中...';
+}
+
+function switchPage(page,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  el.classList.add('active');
+  ({kinyuu:initKinyuu,history:initHistory,monthend:initMonthend,children:renderChildren,staff:renderStaff,ryoukin:renderPriceGrid})[page]?.();
+}
+
+// ===== 記帳 =====
+function initKinyuu(){
+  const sel=document.getElementById('k-child'), cur=sel.value;
+  sel.innerHTML='<option value="">— 選んでください —</option>';
+  children.forEach(c=>{ const o=document.createElement('option'); o.value=c.id; o.textContent=c.name; if(c.id===cur)o.selected=true; sel.appendChild(o); });
+  buildItemSelect(); buildStaffSelect();
+  if(cur) onChildSelect();
+}
+function buildItemSelect(){
+  const sel=document.getElementById('k-item'), cur=sel.value;
+  sel.innerHTML='<option value="">— 品名を選ぶ —</option>';
+  [...priceList].sort((a,b)=>a.price-b.price).forEach(p=>{ const o=document.createElement('option'); o.value=p.id; o.textContent=`${p.name}（${p.price}円）`; if(p.id===cur)o.selected=true; sel.appendChild(o); });
+}
+function buildStaffSelect(){
+  const sel=document.getElementById('k-staff'), cur=sel.value;
+  sel.innerHTML='<option value="">— 記入者を選ぶ —</option>';
+  staffList.forEach(s=>{ const o=document.createElement('option'); o.value=s.id; o.textContent=s.name; if(s.id===cur)o.selected=true; sel.appendChild(o); });
+}
+function getUsed(cid,ym){ return entries.filter(e=>e.child_id===cid&&e.date.startsWith(ym)).reduce((s,e)=>s+e.price,0); }
+function getBal(cid,ym){ const c=children.find(x=>x.id===cid); return c?(c.carry_over||0)+mBudget(ym)-getUsed(cid,ym):0; }
+
+function onChildSelect(){
+  const cid=document.getElementById('k-child').value;
+  const area=document.getElementById('balance-area');
+  if(!cid){ area.style.display='none'; return; }
+  area.style.display='block';
+  const ym=currentYM(), c=children.find(x=>x.id===cid);
+  const carry=c?(c.carry_over||0):0, budget=mBudget(ym), used=getUsed(cid,ym);
+  const bal=carry+budget-used, total=carry+budget;
+  document.getElementById('k-budget').textContent=`¥${total.toLocaleString()}`;
+  document.getElementById('k-used').textContent=`¥${used.toLocaleString()}`;
+  const be=document.getElementById('k-balance');
+  be.textContent=fmtBal(bal); be.className='metric-value '+(bal>=0?'text-green':'text-red');
+  const pct=total>0?Math.max(0,Math.min(100,Math.round(bal/total*100))):0;
+  const bar=document.getElementById('k-bar');
+  bar.style.width=(bal<0?0:pct)+'%';
+  bar.style.background=bal<0?'var(--red)':pct>30?'var(--green)':pct>10?'var(--amber)':'var(--red)';
+  document.getElementById('k-bar-label').textContent=bal<0?`残高 マイナス ¥${Math.abs(bal).toLocaleString()}`:`残高 ${pct}%`;
+}
+function onItemSelect(){
+  if(document.getElementById('k-item').value){ kMode='list'; document.getElementById('k-custom-name').value=''; document.getElementById('k-custom-price').value=''; }
+  calcTotal();
+}
+function onCustomInput(){
+  const n=document.getElementById('k-custom-name').value.trim(), p=document.getElementById('k-custom-price').value;
+  if(n||p){ kMode='custom'; document.getElementById('k-item').value=''; }
+  calcTotal();
+}
+function calcTotal(){
+  const qty=parseInt(document.getElementById('k-qty').value)||1;
+  let price=0;
+  if(kMode==='list'){ const pid=document.getElementById('k-item').value; if(pid){ const it=priceList.find(p=>p.id===pid); if(it)price=it.price*qty; } }
+  else price=(parseInt(document.getElementById('k-custom-price').value)||0)*qty;
+  document.getElementById('k-total').textContent=price?`¥${price.toLocaleString()}`:'—';
+}
+
+async function addEntry(){
+  const cid=document.getElementById('k-child').value, sid=document.getElementById('k-staff').value;
+  const qty=parseInt(document.getElementById('k-qty').value)||1, res=document.getElementById('k-result'), btn=document.getElementById('k-btn');
+  if(!cid){ notice(res,'error','⚠️ お子さんを選んでください'); return; }
+  if(!sid){ notice(res,'error','⚠️ 記入者を選んでください'); return; }
+  let itemName,unitPrice,price;
+  if(kMode==='list'){
+    const pid=document.getElementById('k-item').value;
+    if(!pid){ notice(res,'error','⚠️ 品名を選ぶか、下の欄に入力してください'); return; }
+    const it=priceList.find(p=>p.id===pid); itemName=it.name; unitPrice=it.price; price=unitPrice*qty;
+  } else {
+    itemName=document.getElementById('k-custom-name').value.trim();
+    unitPrice=parseInt(document.getElementById('k-custom-price').value)||0;
+    price=unitPrice*qty;
+    if(!itemName||!unitPrice){ notice(res,'error','⚠️ 品名と単価を入力してください'); return; }
+  }
+  const ym=currentYM(), bal=getBal(cid,ym)-price;
+  const c=children.find(x=>x.id===cid), s=staffList.find(x=>x.id===sid);
+  const entry={ id:uid(), date:nowDate(), child_id:cid, child_name:c.name, item_name:itemName, unit_price:unitPrice, qty, price, balance:bal, staff_id:sid, staff_name:s.name };
+  btn.disabled=true; setSyncStatus('loading');
+  try{
+    await sbInsert('entries',entry); entries.push(entry); setSyncStatus('ok');
+    notice(res,'success',`✓ 記帳しました：${itemName} × ${qty} = ¥${price}　残高：${fmtBal(bal)}`);
+    document.getElementById('k-item').value=''; document.getElementById('k-custom-name').value='';
+    document.getElementById('k-custom-price').value=''; document.getElementById('k-qty').value=1;
+    document.getElementById('k-total').textContent='—'; kMode='list'; onChildSelect();
+  } catch(e){ setSyncStatus('err'); notice(res,'error','⚠️ 保存に失敗しました。通信状況を確認してください。'); }
+  btn.disabled=false;
+}
+
+// ===== 履歴 =====
+function initHistory(){
+  const sel=document.getElementById('h-child'), cur=sel.value;
+  sel.innerHTML='<option value="">全員</option>';
+  children.forEach(c=>{ const o=document.createElement('option'); o.value=c.id; o.textContent=c.name; if(c.id===cur)o.selected=true; sel.appendChild(o); });
+  buildMonthSelect('h-month'); renderHistory();
+}
+function buildMonthSelect(sid){
+  const sel=document.getElementById(sid), cur=sel.value||currentYM();
+  const months=new Set([currentYM()]); entries.forEach(e=>months.add(e.date.slice(0,7)));
+  sel.innerHTML=[...months].sort().reverse().map(ym=>`<option value="${ym}"${ym===cur?' selected':''}>${ymLabel(ym)}</option>`).join('');
+}
+function renderHistory(){
+  const cid=document.getElementById('h-child').value, ym=document.getElementById('h-month').value;
+  let list=entries.filter(e=>e.date.startsWith(ym));
+  if(cid) list=list.filter(e=>e.child_id===cid);
+  list=[...list].sort((a,b)=>a.date.localeCompare(b.date));
+  document.getElementById('h-title').textContent=cid?`${children.find(c=>c.id===cid)?.name} の記帳履歴`:'全員の記帳履歴';
+  document.getElementById('h-count').textContent=`${list.length}件`;
+  const tbody=document.getElementById('h-body');
+  if(!list.length){ tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px;">記帳がありません</td></tr>'; return; }
+  tbody.innerHTML=list.map(e=>`<tr>
+    <td>${fmtDate(e.date)}</td><td>${e.child_name}</td><td>${e.item_name}</td>
+    <td style="text-align:center;">${e.qty}</td><td>¥${e.price.toLocaleString()}</td>
+    <td style="font-weight:600;color:${balColor(e.balance)}">${fmtBal(e.balance)}</td>
+    <td>${e.staff_name}</td>
+    <td><button class="btn btn-danger" onclick="deleteEntry('${e.id}')">削除</button></td>
+  </tr>`).join('');
+}
+
+// ===== 月末集計 =====
+function initMonthend(){ buildMonthSelect('m-month'); renderMonthend(); }
+function renderMonthend(){
+  const ym=document.getElementById('m-month').value; if(!ym) return;
+  const tbody=document.getElementById('m-body'); let unans=0;
+  if(!children.length){ tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">お子さんが登録されていません</td></tr>'; return; }
+  tbody.innerHTML=children.map(c=>{
+    const carry=c.carry_over||0, budget=mBudget(ym), used=getUsed(c.id,ym), bal=carry+budget-used;
+    const choice=c.parent_choice||null; if(!choice)unans++;
+    const status=choice?`<span class="badge badge-green">✓ 回答済</span>`:`<span class="badge badge-amber">待機中</span>`;
+    const sel=`<select onchange="setParentChoice('${c.id}',this.value)" style="font-size:12px;padding:4px 6px;width:auto;">
+      <option value="">選択...</option>
+      <option value="繰り越し"${choice==='繰り越し'?' selected':''}>繰り越し</option>
+      <option value="払い戻し"${choice==='払い戻し'?' selected':''}>払い戻し</option>
+    </select>`;
+    return `<tr><td><strong>${c.name}</strong></td><td>¥${carry.toLocaleString()}</td><td>¥${budget.toLocaleString()}</td>
+      <td>¥${used.toLocaleString()}</td><td style="font-weight:700;color:${balColor(bal)}">${fmtBal(bal)}</td>
+      <td>${sel}</td><td>${status}</td></tr>`;
+  }).join('');
+  document.getElementById('m-unanswered').textContent=`${unans}名`;
+}
+async function setParentChoice(cid,val){
+  const c=children.find(x=>x.id===cid); if(!c)return;
+  setSyncStatus('loading');
+  try{ await sbUpdate('children',cid,{parent_choice:val||null}); c.parent_choice=val||null; setSyncStatus('ok'); renderMonthend(); }
+  catch(e){ setSyncStatus('err'); alert('保存に失敗しました。'); }
+}
+
+// ===== お子さん管理 =====
+function renderChildren(){
+  const tbody=document.getElementById('children-body');
+  if(!children.length){ tbody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:16px;">まだ登録がありません</td></tr>'; return; }
+  tbody.innerHTML=children.map(c=>`<tr>
+    <td><strong>${c.name}</strong></td><td>¥${(c.carry_over||0).toLocaleString()}</td>
+    <td style="font-size:12px;color:var(--text3);">${c.created_at||''}</td>
+    <td><button class="btn btn-danger" onclick="openDeleteModal('child','${c.id}','${c.name}')">削除</button></td>
+  </tr>`).join('');
+}
+async function addChild(){
+  const name=document.getElementById('c-name').value.trim(), carry=parseInt(document.getElementById('c-carry').value)||0, res=document.getElementById('c-result');
+  if(!name){ notice(res,'error','⚠️ お名前を入力してください'); return; }
+  if(children.find(c=>c.name===name)){ notice(res,'error','⚠️ 同じ名前のお子さんが既に登録されています'); return; }
+  const data={id:uid(),name,carry_over:carry,parent_choice:null,created_at:nowDate()};
+  setSyncStatus('loading');
+  try{ await sbInsert('children',data); children.push(data); setSyncStatus('ok');
+    document.getElementById('c-name').value=''; document.getElementById('c-carry').value=0;
+    notice(res,'success',`✓ ${name} を登録しました`); renderChildren(); initKinyuu();
+  } catch(e){ setSyncStatus('err'); notice(res,'error','⚠️ 保存に失敗しました'); }
+}
+
+// ===== スタッフ管理 =====
+function renderStaff(){
+  const tbody=document.getElementById('staff-body');
+  if(!staffList.length){ tbody.innerHTML='<tr><td colspan="3" style="text-align:center;color:var(--text3);padding:16px;">まだ登録がありません</td></tr>'; return; }
+  tbody.innerHTML=staffList.map(s=>`<tr>
+    <td><strong>${s.name}</strong></td><td style="font-size:12px;color:var(--text3);">${s.created_at||''}</td>
+    <td><button class="btn btn-danger" onclick="openDeleteModal('staff','${s.id}','${s.name}')">削除</button></td>
+  </tr>`).join('');
+}
+async function addStaff(){
+  const name=document.getElementById('s-name').value.trim(), res=document.getElementById('s-result');
+  if(!name){ notice(res,'error','⚠️ お名前を入力してください'); return; }
+  if(staffList.find(s=>s.name===name)){ notice(res,'error','⚠️ 同じ名前のスタッフが既に登録されています'); return; }
+  const data={id:uid(),name,created_at:nowDate()};
+  setSyncStatus('loading');
+  try{ await sbInsert('staff',data); staffList.push(data); setSyncStatus('ok');
+    document.getElementById('s-name').value='';
+    notice(res,'success',`✓ ${name} を登録しました`); renderStaff(); buildStaffSelect();
+  } catch(e){ setSyncStatus('err'); notice(res,'error','⚠️ 保存に失敗しました：'+e.message); }
+}
+
+// ===== 料金表 =====
+function renderPriceGrid(){
+  const sorted=[...priceList].sort((a,b)=>a.price-b.price);
+  document.getElementById('price-count').textContent=sorted.length;
+  document.getElementById('price-grid').innerHTML=sorted.map(item=>`
+    <div class="price-chip">
+      <div class="price-chip-info"><div class="price-chip-name">${item.name}</div><div class="price-chip-price">¥${item.price}</div></div>
+      <button class="btn btn-danger" onclick="openDeleteModal('price','${item.id}','${item.name}')" style="flex-shrink:0;padding:4px 8px;">削除</button>
+    </div>`).join('');
+}
+async function addPriceItem(){
+  const name=document.getElementById('p-name').value.trim(), price=parseInt(document.getElementById('p-price').value), res=document.getElementById('p-result');
+  if(!name||!price){ notice(res,'error','⚠️ 品名と単価を入力してください'); return; }
+  if(priceList.find(p=>p.name===name)){ notice(res,'error','⚠️ 同じ品名が既に登録されています'); return; }
+  const data={id:uid(),name,price};
+  setSyncStatus('loading');
+  try{ await sbInsert('price_list',data); priceList.push(data); setSyncStatus('ok');
+    document.getElementById('p-name').value=''; document.getElementById('p-price').value='';
+    notice(res,'success',`✓ ${name}（¥${price}）を追加しました`); renderPriceGrid(); buildItemSelect();
+  } catch(e){ setSyncStatus('err'); notice(res,'error','⚠️ 保存に失敗しました'); }
+}
+
+// ===== 削除モーダル =====
+function openDeleteModal(type,id,name){
+  deleteTarget={type,id,name};
+  document.getElementById('modal-title').textContent='削除の確認';
+  document.getElementById('modal-msg').textContent=`「${name}」を削除してよろしいですか？この操作は元に戻せません。`;
+  document.getElementById('modal-bg').classList.add('open');
+}
+function closeModal(){ document.getElementById('modal-bg').classList.remove('open'); deleteTarget=null; }
+async function confirmDelete(){
+  if(!deleteTarget)return;
+  const{type,id,name}=deleteTarget; closeModal(); setSyncStatus('loading');
+  try{
+    if(type==='child'){ await sbDelete('children',id); children=children.filter(c=>c.id!==id); renderChildren(); initKinyuu(); }
+    else if(type==='staff'){ await sbDelete('staff',id); staffList=staffList.filter(s=>s.id!==id); renderStaff(); buildStaffSelect(); }
+    else if(type==='price'){ await sbDelete('price_list',id); priceList=priceList.filter(p=>p.id!==id); renderPriceGrid(); buildItemSelect(); }
+    setSyncStatus('ok');
+  } catch(e){ setSyncStatus('err'); alert('削除に失敗しました。'); }
+}
+async function deleteEntry(id){
+  if(!confirm('この記帳を削除してよろしいですか？'))return;
+  setSyncStatus('loading');
+  try{ await sbDelete('entries',id); entries=entries.filter(e=>e.id!==id); setSyncStatus('ok'); renderHistory(); onChildSelect(); }
+  catch(e){ setSyncStatus('err'); alert('削除に失敗しました。'); }
+}
+
+// ===== 初期化 =====
+async function init(){
+  const d=new Date();
+  document.getElementById('header-date').textContent=`${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
+  try{
+    const[c,s,p,e]=await Promise.all([
+      sbGet('children','order=created_at'),
+      sbGet('staff','order=created_at'),
+      sbGet('price_list','order=price'),
+      sbGet('entries','order=date'),
+    ]);
+    children=c; staffList=s; priceList=p; entries=e;
+    setSyncStatus('ok');
+    document.getElementById('loading-overlay').style.display='none';
+    initKinyuu();
+  } catch(err){
+    setSyncStatus('err');
+    document.getElementById('loading-overlay').style.display='none';
+    alert('接続エラー：' + err.message + '\n\nページを再読み込みしてください。');
+    initKinyuu();
+  }
+}
+init();
+</script>
+</body>
+</html>
